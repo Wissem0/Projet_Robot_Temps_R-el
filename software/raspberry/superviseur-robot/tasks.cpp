@@ -123,6 +123,11 @@ void Tasks::Init() {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    if (err = rt_task_create(&th_battery, "th_battery", 0, PRIORITY_TSTARTROBOT, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    
     cout << "Tasks created successfully" << endl << flush;
 
     /**************************************************************************************/
@@ -164,6 +169,11 @@ void Tasks::Run() {
         exit(EXIT_FAILURE);
     }
     if (err = rt_task_start(&th_move, (void(*)(void*)) & Tasks::MoveTask, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    
+    if (err = rt_task_start(&th_battery, (void(*)(void*)) & Tasks::CheckBattery, this)) {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -415,3 +425,12 @@ Message *Tasks::ReadInQueue(RT_QUEUE *queue) {
     return msg;
 }
 
+/*
+ * Return the state of the battery
+ */
+void Tasks::CheckBattery(){
+    cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
+    
+    cout << robot.GetState()->ToString() << endl;
+    cout << robot.GetBattery()->ToString() << endl;
+}
