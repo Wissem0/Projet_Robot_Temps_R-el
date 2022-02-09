@@ -430,7 +430,29 @@ Message *Tasks::ReadInQueue(RT_QUEUE *queue) {
  */
 void Tasks::CheckBattery(){
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
+    // Synchronization barrier (waiting that all tasks are starting)
+    rt_sem_p(&sem_barrier, TM_INFINITE);
     
-    cout << robot.GetState()->ToString() << endl;
-    cout << robot.GetBattery()->ToString() << endl;
+    /**************************************************************************************/
+    /* The task startRobot starts here                                                    */
+    /**************************************************************************************/
+    while (1) {
+        rt_task_wait_period(NULL);
+        cout << "Battery update";
+        rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
+        rs = robotStarted;
+        rt_mutex_release(&mutex_robotStarted);
+
+        if (rs == 1) {
+            rt_mutex_acquire(&mutex_move, TM_INFINITE);
+            msgSend = robot.Write(robot.GetBattery());
+            rt_mutex_release(&mutex_move);
+            
+            cout << "Battery Level: " << msgSend->ToString() << endl << flush;
+            
+        }
+        cout << endl << flush;
+    }
+    //cout << robot.GetState()->ToString() << endl;
+    //cout << robot.GetBattery()->ToString() << endl;
 }
