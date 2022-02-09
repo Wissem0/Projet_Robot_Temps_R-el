@@ -67,6 +67,9 @@ private:
     int robotStarted = 0;
     int move = MESSAGE_ROBOT_STOP;
     
+    //0 = without 1 = with WD
+    int WD = 0;
+    
     /**********************************************************************/
     /* Tasks                                                              */
     /**********************************************************************/
@@ -85,6 +88,7 @@ private:
     RT_MUTEX mutex_robot;
     RT_MUTEX mutex_robotStarted;
     RT_MUTEX mutex_move;
+    RT_MUTEX mutex_wd;
 
     /**********************************************************************/
     /* Semaphores                                                         */
