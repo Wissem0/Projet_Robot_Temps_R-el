@@ -77,6 +77,10 @@ void Tasks::Init() {
         cerr << "Error mutex create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+     if (err = rt_mutex_create(&mutex_compteur, NULL)) {
+        cerr << "Error mutex create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
 
 
     cout << "Mutexes created successfully" << endl << flush;
@@ -248,10 +252,26 @@ void Tasks::SendToMonTask(void* arg) {
     while (1) {
         cout << "wait msg to send" << endl << flush;
         msg = ReadInQueue(&q_messageToMon);
+        if (msg->ToString() != "Answer [Acknowledge]")
+        {
+             cout << "Send msg to mon: " << msg->ToString() << endl << flush;
+             cout << "Communication avec le monitor perdue " << msg->ToString() << endl << flush;
+             rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+                msgSend = robot.Write(robot.Stop());
+                
+                robot.close();
+             rt_mutex_release(&mutex_robot);
+             rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
+                 status = monitor.Close(SERVER_PORT);
+             rt_mutex_release(&mutex_monitor);
+        }
+        else
+        {
         cout << "Send msg to mon: " << msg->ToString() << endl << flush;
         rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
         monitor.Write(msg); // The message is deleted with the Write
         rt_mutex_release(&mutex_monitor);
+        }
     }
 }
 
@@ -431,10 +451,10 @@ void Tasks::StartRobotTask(void *arg) {
                 rt_task_set_periodic(NULL, TM_NOW, 1000000000);
                 while(robotStarted){
                     rt_task_wait_period(NULL);
-                    rt_mutex_acquire(&mutex_robot, TM_INFINITE);
-                    msgSend = robot.Write(robot.ReloadWD());
-                    rt_mutex_release(&mutex_robot);
-                    
+                   // rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+                   // msgSend = robot.Write(robot.ReloadWD());
+                   // rt_mutex_release(&mutex_robot);
+                    commrobot_annexe(robot.ReloadWD());
                 }
                 
             }
@@ -474,9 +494,10 @@ void Tasks::MoveTask(void *arg) {
             
             cout << " move: " << cpMove<<endl;
             
-            rt_mutex_acquire(&mutex_robot, TM_INFINITE);
-            robot.Write(new Message((MessageID)cpMove));
-            rt_mutex_release(&mutex_robot);
+            //rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+           // robot.Write(new Message((MessageID)cpMove));
+           // rt_mutex_release(&mutex_robot);
+            commrobot_annexe(new Message((MessageID)cpMove));
         }
         cout << endl << flush;
     }
@@ -542,17 +563,40 @@ void Tasks::CheckBattery(){
         rt_mutex_release(&mutex_robotStarted);
 
         if (rs == 1) {
-            rt_mutex_acquire(&mutex_robot, TM_INFINITE);
-            msgSend = robot.Write(robot.GetBattery());
-            rt_mutex_release(&mutex_robot);
-            
+           commrobot_annexe(robot.GetBattery())
            cout << "Battery Level: " << msgSend->ToString() << endl << flush;
            WriteInQueue(&q_messageToMon, msgSend); 
-
+           
            
         }
         cout << endl << flush;
     }
+    
+
     //cout << robot.GetState()->ToString() << endl;
     //cout << robot.GetBattery()->ToString() << endl;
+}
+
+
+Message* commrobot_annexe(Message * msgSend){
+    Message* msg;
+    rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+       msg = robot.Write(msgSend);
+    rt_mutex_release(&mutex_robot);
+    if (msg->ToString() == "MESSAGE_ANSWER_ROBOT_ERROR"){
+    rt_mutex_acquire(&mutex_compteur, TM_INFINITE);
+        compteur++;
+        int nombreperdu = compteur;
+    rt_mutex_release(&mutex_compteur);
+    if (nombreperdu > 3){
+         cout << "Perte de communication entre superviseur et robot"<<endl;
+    }
+    }
+    else{
+     rt_mutex_acquire(&mutex_compteur, TM_INFINITE);
+        compteur = 0;
+     rt_mutex_release(&mutex_compteur);
+    }
+    
+    
 }

@@ -65,6 +65,7 @@ private:
     ComMonitor monitor;
     ComRobot robot;
     int robotStarted = 0;
+    int compteur = 0;
     int move = MESSAGE_ROBOT_STOP;
     
     //0 = without 1 = with WD
@@ -89,6 +90,7 @@ private:
     RT_MUTEX mutex_robotStarted;
     RT_MUTEX mutex_move;
     RT_MUTEX mutex_wd;
+    RT_MUTEX mutex_compteur;
 
     /**********************************************************************/
     /* Semaphores                                                         */
