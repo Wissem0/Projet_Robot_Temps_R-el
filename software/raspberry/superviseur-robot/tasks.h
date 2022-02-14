@@ -157,7 +157,8 @@ private:
     Message *ReadInQueue(RT_QUEUE *queue);
     
     void CheckBattery();
-
+    
+    Message* commrobot_annexe(Message * msgSend);
 };
 
 #endif // __TASKS_H__ 
